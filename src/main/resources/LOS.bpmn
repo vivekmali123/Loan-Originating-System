@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_02xx541" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.21.0" modeler:executionPlatform="Camunda Platform" modeler:executionPlatformVersion="7.20.0">
+  <bpmn:message id="Message_33je3f2" name="Approved" />
+  <bpmn:escalation id="Escalation_3kpq7t3" name="Need_More_Documents" escalationCode="Need_More_Documents" />
+  <bpmn:collaboration id="Collaboration_1mpqrrq">
+    <bpmn:participant id="Participant_0b8zes4" name="Loan Originating System" processRef="LoanOriginatingSystemProcess" />
+    <bpmn:textAnnotation id="TextAnnotation_0wnupgg">
+      <bpmn:text>Submit details for loan application.</bpmn:text>
+    </bpmn:textAnnotation>
+  </bpmn:collaboration>
+  <bpmn:process id="LoanOriginatingSystemProcess" name="Loan Originating System" isExecutable="true" camunda:historyTimeToLive="P180D">
+    <bpmn:extensionElements>
+      <camunda:executionListener delegateExpression="${generateBusinessKey}" event="start" />
+    </bpmn:extensionElements>
+    <bpmn:userTask id="ExpertReviewTask" name="Expert review">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="review" label="Result" type="string" />
+        </camunda:formData>
+        <camunda:taskListener delegateExpression="${assignExpert}" event="create" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0w8vu6p</bpmn:incoming>
+      <bpmn:incoming>Flow_0m8k2ll</bpmn:incoming>
+      <bpmn:incoming>Flow_0y94e69</bpmn:incoming>
+      <bpmn:outgoing>Flow_1xmci04</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="DocumentSubmissionTask" name="Submit documents physically">
+      <bpmn:incoming>Flow_0o1o0hm</bpmn:incoming>
+      <bpmn:outgoing>Flow_0w8vu6p</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_1i1lotb" name="Cibil check ?" default="Flow_0fefcji">
+      <bpmn:incoming>Flow_1xlkfac</bpmn:incoming>
+      <bpmn:outgoing>Flow_0fefcji</bpmn:outgoing>
+      <bpmn:outgoing>Cibil700SequenceFlow</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="RejectTask" name="Send rejection notification" camunda:delegateExpression="${rejectionNotification}">
+      <bpmn:incoming>Flow_0fefcji</bpmn:incoming>
+      <bpmn:outgoing>Flow_105gfr5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="RejectedEndEvent" name="Rejected">
+      <bpmn:incoming>Flow_105gfr5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="ApprovedTask" name="Send approval notification" camunda:delegateExpression="${ApplicationMain}">
+      <bpmn:incoming>Cibil700SequenceFlow</bpmn:incoming>
+      <bpmn:outgoing>Flow_0o1o0hm</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="LoanProcessInitiatedStartEvent" name="Loan process initiated">
+      <bpmn:extensionElements />
+      <bpmn:outgoing>Flow_0geqkvg</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="SubmitApplicationTask" name="Submit application" camunda:formRef="Form_Application_Details" camunda:formRefBinding="latest">
+      <bpmn:extensionElements>
+        <camunda:executionListener delegateExpression="${saveCustomerDelegate}" event="end" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0geqkvg</bpmn:incoming>
+      <bpmn:outgoing>Flow_0pd4kat</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Activity_05kyqs5" name="Credit Check">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="cibil_score" label="Cibil Score" type="long" />
+        </camunda:formData>
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0pd4kat</bpmn:incoming>
+      <bpmn:outgoing>Flow_1xlkfac</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="Event_1keq5hf" name="Collect fund">
+      <bpmn:incoming>Flow_06mbco1</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="YourLoanHasBeenApprovedTask" name="Loan approved notification" camunda:delegateExpression="${whatsappNotification}">
+      <bpmn:incoming>DoneSequenceFlow</bpmn:incoming>
+      <bpmn:outgoing>Flow_06mbco1</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_0q3yuhd" name="Review status ?" default="Flow_0ul4vbi">
+      <bpmn:incoming>Flow_1xmci04</bpmn:incoming>
+      <bpmn:outgoing>DoneSequenceFlow</bpmn:outgoing>
+      <bpmn:outgoing>QuerySequenceFlow</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0ul4vbi</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:intermediateThrowEvent id="NeedMoreDocumentsEvent" name="Need more documents">
+      <bpmn:incoming>QuerySequenceFlow</bpmn:incoming>
+      <bpmn:outgoing>Flow_1eh5cu2</bpmn:outgoing>
+      <bpmn:escalationEventDefinition id="EscalationEventDefinition_0x64yyy" escalationRef="Escalation_3kpq7t3" />
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="SubmitRequiredDocumentsEvent" name="Documents received">
+      <bpmn:incoming>Flow_1eh5cu2</bpmn:incoming>
+      <bpmn:outgoing>Flow_0m8k2ll</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_11dvq5z" messageRef="Message_33je3f2" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="ReviewPendingTask" name="Review pending">
+      <bpmn:incoming>Flow_0ul4vbi</bpmn:incoming>
+      <bpmn:outgoing>Flow_0y94e69</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:subProcess id="DocumentsRequiredSubProcess" name="Documents required" triggeredByEvent="true">
+      <bpmn:sequenceFlow id="Flow_0at6nz6" sourceRef="NeedSomeMoreDocumentsTask" targetRef="DocumentSubmittedEndEvent" />
+      <bpmn:startEvent id="DocumentSubmissionInitatedStartEvent" name="Document submission initated" isInterrupting="false">
+        <bpmn:outgoing>Flow_00lbgs6</bpmn:outgoing>
+        <bpmn:escalationEventDefinition id="EscalationEventDefinition_19cu04w" escalationRef="Escalation_3kpq7t3" />
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="Flow_00lbgs6" sourceRef="DocumentSubmissionInitatedStartEvent" targetRef="NeedSomeMoreDocumentsTask" />
+      <bpmn:userTask id="NeedSomeMoreDocumentsTask" name="Need some more documents">
+        <bpmn:incoming>Flow_00lbgs6</bpmn:incoming>
+        <bpmn:outgoing>Flow_0at6nz6</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:intermediateThrowEvent id="DocumentSubmittedEndEvent" name="Document submitted">
+        <bpmn:incoming>Flow_0at6nz6</bpmn:incoming>
+        <bpmn:messageEventDefinition id="MessageEventDefinition_1vzzs7i" messageRef="Message_33je3f2" />
+      </bpmn:intermediateThrowEvent>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="Flow_0w8vu6p" name="review" sourceRef="DocumentSubmissionTask" targetRef="ExpertReviewTask" />
+    <bpmn:sequenceFlow id="Flow_0m8k2ll" name="review again" sourceRef="SubmitRequiredDocumentsEvent" targetRef="ExpertReviewTask" />
+    <bpmn:sequenceFlow id="Flow_0y94e69" name="review again" sourceRef="ReviewPendingTask" targetRef="ExpertReviewTask" />
+    <bpmn:sequenceFlow id="Flow_1xmci04" sourceRef="ExpertReviewTask" targetRef="Gateway_0q3yuhd" />
+    <bpmn:sequenceFlow id="Flow_0o1o0hm" sourceRef="ApprovedTask" targetRef="DocumentSubmissionTask" />
+    <bpmn:sequenceFlow id="Flow_1xlkfac" sourceRef="Activity_05kyqs5" targetRef="Gateway_1i1lotb" />
+    <bpmn:sequenceFlow id="Flow_0fefcji" name="Cibil &#60; 700" sourceRef="Gateway_1i1lotb" targetRef="RejectTask" />
+    <bpmn:sequenceFlow id="Cibil700SequenceFlow" name="cibil &#62;= 700" sourceRef="Gateway_1i1lotb" targetRef="ApprovedTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${cibil_score&gt;= 700}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_105gfr5" sourceRef="RejectTask" targetRef="RejectedEndEvent" />
+    <bpmn:sequenceFlow id="Flow_0geqkvg" sourceRef="LoanProcessInitiatedStartEvent" targetRef="SubmitApplicationTask" />
+    <bpmn:sequenceFlow id="Flow_0pd4kat" sourceRef="SubmitApplicationTask" targetRef="Activity_05kyqs5" />
+    <bpmn:sequenceFlow id="Flow_06mbco1" sourceRef="YourLoanHasBeenApprovedTask" targetRef="Event_1keq5hf" />
+    <bpmn:sequenceFlow id="DoneSequenceFlow" name="Done" sourceRef="Gateway_0q3yuhd" targetRef="YourLoanHasBeenApprovedTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${review == "done"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="QuerySequenceFlow" name="In complete documents" sourceRef="Gateway_0q3yuhd" targetRef="NeedMoreDocumentsEvent">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${review == "query"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_0ul4vbi" name="waiting for review" sourceRef="Gateway_0q3yuhd" targetRef="ReviewPendingTask" />
+    <bpmn:sequenceFlow id="Flow_1eh5cu2" sourceRef="NeedMoreDocumentsEvent" targetRef="SubmitRequiredDocumentsEvent" />
+    <bpmn:association id="Association_0xrtk06" associationDirection="None" sourceRef="SubmitApplicationTask" targetRef="TextAnnotation_0wnupgg" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_1mpqrrq">
+      <bpmndi:BPMNShape id="Participant_0b8zes4_di" bpmnElement="Participant_0b8zes4" isHorizontal="true">
+        <dc:Bounds x="120" y="40" width="1580" height="740" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0qvmkq1_di" bpmnElement="ExpertReviewTask">
+        <dc:Bounds x="1120" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0nm17av_di" bpmnElement="DocumentSubmissionTask">
+        <dc:Bounds x="940" y="250" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0rk5kge_di" bpmnElement="Gateway_1i1lotb" isMarkerVisible="true">
+        <dc:Bounds x="605" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="598" y="241" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0ep5vb8_di" bpmnElement="RejectTask">
+        <dc:Bounds x="750" y="390" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1hhntas_di" bpmnElement="RejectedEndEvent">
+        <dc:Bounds x="902" y="412" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="898" y="463" width="44" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1vs90dk_di" bpmnElement="ApprovedTask">
+        <dc:Bounds x="750" y="250" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="LoanProcessInitiatedStartEvent">
+        <dc:Bounds x="172" y="272" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="157" y="315" width="67" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0zneu1b_di" bpmnElement="SubmitApplicationTask">
+        <dc:Bounds x="260" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_11p79r3_di" bpmnElement="Activity_05kyqs5">
+        <dc:Bounds x="420" y="250" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1keq5hf_di" bpmnElement="Event_1keq5hf">
+        <dc:Bounds x="1642" y="332" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1631" y="375" width="59" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0ouklkg_di" bpmnElement="YourLoanHasBeenApprovedTask">
+        <dc:Bounds x="1450" y="310" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0q3yuhd_di" bpmnElement="Gateway_0q3yuhd" isMarkerVisible="true">
+        <dc:Bounds x="1295" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1361" y="280" width="78" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1jit4lf_di" bpmnElement="NeedMoreDocumentsEvent">
+        <dc:Bounds x="1442" y="462" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1432" y="436" width="55" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_052e576_di" bpmnElement="SubmitRequiredDocumentsEvent">
+        <dc:Bounds x="1522" y="462" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1562" y="466" width="56" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0i9h0jr_di" bpmnElement="ReviewPendingTask">
+        <dc:Bounds x="1450" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1sj7vph_di" bpmnElement="DocumentsRequiredSubProcess" isExpanded="true">
+        <dc:Bounds x="380" y="560" width="400" height="200" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1dd38a3_di" bpmnElement="DocumentSubmissionInitatedStartEvent">
+        <dc:Bounds x="412" y="642" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="402" y="685" width="56" height="40" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_09estf5_di" bpmnElement="NeedSomeMoreDocumentsTask">
+        <dc:Bounds x="540" y="620" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1xjhnq4_di" bpmnElement="DocumentSubmittedEndEvent">
+        <dc:Bounds x="722" y="642" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="714" y="685" width="52" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0at6nz6_di" bpmnElement="Flow_0at6nz6">
+        <di:waypoint x="640" y="660" />
+        <di:waypoint x="722" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00lbgs6_di" bpmnElement="Flow_00lbgs6">
+        <di:waypoint x="448" y="660" />
+        <di:waypoint x="540" y="660" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0w8vu6p_di" bpmnElement="Flow_0w8vu6p">
+        <di:waypoint x="1040" y="290" />
+        <di:waypoint x="1120" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1064" y="272" width="33" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0m8k2ll_di" bpmnElement="Flow_0m8k2ll">
+        <di:waypoint x="1540" y="498" />
+        <di:waypoint x="1540" y="550" />
+        <di:waypoint x="1170" y="550" />
+        <di:waypoint x="1170" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1324" y="532" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0y94e69_di" bpmnElement="Flow_0y94e69">
+        <di:waypoint x="1500" y="140" />
+        <di:waypoint x="1500" y="100" />
+        <di:waypoint x="1170" y="100" />
+        <di:waypoint x="1170" y="250" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1304" y="82" width="63" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1xmci04_di" bpmnElement="Flow_1xmci04">
+        <di:waypoint x="1220" y="290" />
+        <di:waypoint x="1295" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0o1o0hm_di" bpmnElement="Flow_0o1o0hm">
+        <di:waypoint x="850" y="290" />
+        <di:waypoint x="940" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1xlkfac_di" bpmnElement="Flow_1xlkfac">
+        <di:waypoint x="520" y="290" />
+        <di:waypoint x="605" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0fefcji_di" bpmnElement="Flow_0fefcji">
+        <di:waypoint x="630" y="315" />
+        <di:waypoint x="630" y="430" />
+        <di:waypoint x="750" y="430" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="643" y="403" width="53" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_170ietr_di" bpmnElement="Cibil700SequenceFlow">
+        <di:waypoint x="655" y="290" />
+        <di:waypoint x="750" y="290" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="661" y="273" width="57" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_105gfr5_di" bpmnElement="Flow_105gfr5">
+        <di:waypoint x="850" y="430" />
+        <di:waypoint x="902" y="430" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0geqkvg_di" bpmnElement="Flow_0geqkvg">
+        <di:waypoint x="208" y="290" />
+        <di:waypoint x="260" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0pd4kat_di" bpmnElement="Flow_0pd4kat">
+        <di:waypoint x="360" y="290" />
+        <di:waypoint x="420" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06mbco1_di" bpmnElement="Flow_06mbco1">
+        <di:waypoint x="1550" y="350" />
+        <di:waypoint x="1642" y="350" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0mx6yq6_di" bpmnElement="DoneSequenceFlow">
+        <di:waypoint x="1320" y="315" />
+        <di:waypoint x="1320" y="350" />
+        <di:waypoint x="1450" y="350" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1373" y="333" width="27" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_15e1a1u_di" bpmnElement="QuerySequenceFlow">
+        <di:waypoint x="1320" y="315" />
+        <di:waypoint x="1320" y="480" />
+        <di:waypoint x="1442" y="480" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1331" y="406" width="58" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ul4vbi_di" bpmnElement="Flow_0ul4vbi">
+        <di:waypoint x="1320" y="265" />
+        <di:waypoint x="1320" y="180" />
+        <di:waypoint x="1450" y="180" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1317" y="163" width="86" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1eh5cu2_di" bpmnElement="Flow_1eh5cu2">
+        <di:waypoint x="1478" y="480" />
+        <di:waypoint x="1522" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_0xrtk06_di" bpmnElement="Association_0xrtk06">
+        <di:waypoint x="345" y="250" />
+        <di:waypoint x="398" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_0wnupgg_di" bpmnElement="TextAnnotation_0wnupgg">
+        <dc:Bounds x="370" y="150" width="111" height="40" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
